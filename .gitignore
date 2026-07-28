@@ -1,0 +1,30 @@
+# build artefacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# python
+__pycache__/
+*.py[cod]
+.Python
+venv/
+.venv/
+
+# numba's on-disk JIT cache
+__pycache__/*.nbi
+__pycache__/*.nbc
+
+# tooling
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
