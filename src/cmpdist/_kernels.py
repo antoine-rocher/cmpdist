@@ -136,11 +136,14 @@ def rate_from_mean(mu, nu, sig):
     mu = 0.8 and of width ``sig``, which keeps λ(mu) smooth across the
     crossover.
 
-    Valid for 0.5 <= nu < 2. Outside that window the mapping is not trustworthy
-    — for nu below 0.5 the large branch is switched off over a wide stretch of
-    the mu domain and the small-mu series is far outside its radius of
-    convergence — so :class:`~cmpdist.core.CMP` rejects such nu before it ever
-    gets here.
+    Valid for 0.5 <= nu <= 4, which is what :class:`~cmpdist.core.CMP` enforces.
+    The two ends fail differently. Below nu = 1 the offset ``(nu - 1) / (2 nu)``
+    is negative, so for small enough mu the large branch would take a negative
+    base to a fractional power; it is switched off there, and by nu < 0.5 that
+    dead zone overlaps the blend badly enough to wreck the mapping (NaN rates
+    and all-zero counts). Above nu = 1 the offset is positive and the base is
+    never negative, so large nu only degrades gradually — the mean drifts about
+    5% off at nu = 4 and roughly 8% by nu = 10.
     """
     threshold = 0.8
 
