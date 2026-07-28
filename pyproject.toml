@@ -9,7 +9,7 @@ description = "Conway-Maxwell-Poisson sampling: over- and under-dispersed count 
 readme = "README.md"
 requires-python = ">=3.9"
 license = { file = "LICENSE" }
-authors = [{ name = "Antoine Rocher", email = "antoinerocher01370@gmail.com" }]
+authors = [{ name = "Antoine Rocher", email = "antoine.rocher@epfl.ch" }]
 keywords = [
     "conway-maxwell-poisson", "cmp", "count data", "overdispersion",
     "underdispersion", "sampling", "statistics",

@@ -138,6 +138,7 @@ leaves a neglected tail below 1e-8 across the valid `nu` range.
 - The log-factorial table is built lazily and grows on demand, rather than
   allocating a fixed 8 MB at import.
 - Throughput is roughly 3 million draws per second on one core.
+- This package as been re-written by AI Claude based on previous code from the author
 
 ## Tests
 
