@@ -77,14 +77,14 @@ worked walkthrough with plots.
 
 ## Validity range
 
-The validity range for the mean-to-rate mapping is `0.55 < nu < 4`,
-with both endpoints excluded. Values `nu <= 0.55` or `nu >= 4` are outside
+The validity range for the mean-to-rate mapping is `0.55 <= nu <= 4`,
+with both endpoints included. Values `nu < 0.55` or `nu > 4` are outside
 this range. With these bounds enforced in the implementation, an
 out-of-range `nu` raises:
 
 ```python
 d.sample(lam, 0.3)
-# ValueError: nu must satisfy 0.55 < nu < 4.0; got 0.3. ...
+# ValueError: nu must satisfy 0.55 <= nu <= 4.0; got 0.3. ...
 ```
 
 The two ends fail for different reasons, which is worth knowing before you

@@ -42,8 +42,9 @@ class CMP:
         Width of the error-function ramp blending the small-mean and large-mean
         branches of the mean-to-rate mapping.
     nu_range : tuple of float or None
-        Open interval ``(lo, hi)`` over which the mean-to-rate mapping is
-        trusted. ``None`` disables the check entirely.
+        Closed interval ``[lo, hi]`` over which the mean-to-rate mapping is
+        trusted; both endpoints are usable. ``None`` disables the check
+        entirely.
 
         The default ``(0.55, 4.0)`` is the operating window that stays usable.
         Measured worst-case error on the recovered mean, over lam in 1e-3 .. 1e3:
@@ -59,8 +60,8 @@ class CMP:
 
         The error is confined to lam near the 0.8 branch crossover; away from
         ``0.6 < lam < 1.5`` the mapping is accurate even well outside this
-        range. The lower edge is excluded because values at or below 0.55 can
-        drift badly enough to break the mapping near ``lam ≈ 1``.
+        range. The default bounds include 0.55 and 4.0 because they remain
+        usable within the operating window.
     on_invalid_nu : {'raise', 'warn', 'ignore'}
         What to do with a ``nu`` outside ``nu_range``. Defaults to ``'raise'``:
         below nu = 0.55 the mapping can lose accuracy badly and, for small enough
@@ -227,12 +228,12 @@ class CMP:
     def _validate_nu(self, arr):
         """Enforce ``nu_range`` according to :attr:`on_invalid_nu`.
 
-        The range is open: ``lo < nu < hi``.
+        The range is closed: ``lo <= nu <= hi``.
         """
         if self.nu_range is None or self.on_invalid_nu == "ignore" or arr.size == 0:
             return
         lo, hi = self.nu_range
-        bad = (arr <= lo) | (arr >= hi)
+        bad = (arr < lo) | (arr > hi)
         if not bad.any():
             return
 
@@ -241,7 +242,7 @@ class CMP:
         if offenders.size > 5:
             shown += f", ... ({offenders.size} distinct values)"
         message = (
-            f"nu must satisfy {lo} < nu < {hi}; got {shown}. Outside that range "
+            f"nu must satisfy {lo} <= nu <= {hi}; got {shown}. Outside that range "
             f"the mean-to-rate mapping is not valid and can return NaN, giving "
             f"meaningless counts. Pass on_invalid_nu='warn' or 'ignore' to "
             f"override, or widen nu_range."

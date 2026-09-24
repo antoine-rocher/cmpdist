@@ -48,7 +48,7 @@ def reference_log_norm(rate, nu, max_x):
 # pmf
 # --------------------------------------------------------------------------
 
-@pytest.mark.parametrize("nu", [0.5, 0.6, 1.0, 1.5, 2.5, 4.0])
+@pytest.mark.parametrize("nu", [0.6, 0.8, 1.0, 1.5, 2.5, 3.9])
 @pytest.mark.parametrize("lam", [0.3, 1.0, 4.0])
 def test_pmf_matches_definition(d, lam, nu):
     max_x = d.max_count(lam)
@@ -57,7 +57,7 @@ def test_pmf_matches_definition(d, lam, nu):
     assert np.allclose(got, want, rtol=1e-10, atol=1e-14)
 
 
-@pytest.mark.parametrize("nu", [0.6, 1.0, 1.9, 4.0])
+@pytest.mark.parametrize("nu", [0.6, 1.0, 1.9, 3.9])
 def test_pmf_sums_to_one(d, nu):
     for lam in [0.05, 1.0, 10.0, 200.0]:
         total = d.pmf(np.arange(d.max_count(lam) + 1), lam, nu).sum()
@@ -215,23 +215,23 @@ def test_nu_matches_size_argument(d):
 # validation
 # --------------------------------------------------------------------------
 
-@pytest.mark.parametrize("nu", [0.55, 0.49, 0.3, 0.0, 4.0, 4.01, 5.0, -1.0])
+@pytest.mark.parametrize("nu", [0.54, 0.49, 0.3, 0.0, 4.01, 5.0, -1.0])
 def test_nu_outside_valid_range_raises(d, nu):
-    """Default policy rejects nu outside the open interval (0.55, 4)."""
-    with pytest.raises(ValueError, match=r"0\.55 < nu < 4"):
+    """Default policy rejects nu outside the closed interval [0.55, 4]."""
+    with pytest.raises(ValueError, match=r"0\.55 <= nu <= 4"):
         d.sample(np.full(10, 1.0), nu)
 
 
-@pytest.mark.parametrize("nu", [0.6, 0.75, 1.0, 1.5, 2.0, 3.0])
+@pytest.mark.parametrize("nu", [0.55, 0.6, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0])
 def test_nu_inside_valid_range_accepted(d, nu):
-    """Values strictly between 0.55 and 4 are accepted."""
+    """The closed interval endpoints 0.55 and 4.0 are accepted."""
     assert d.sample(np.full(10, 1.0), nu).shape == (10,)
 
 
 def test_array_nu_validated_elementwise(d):
     nu = np.full(10, 1.0)
     nu[4] = 5.0
-    with pytest.raises(ValueError, match=r"0\.55 < nu < 4"):
+    with pytest.raises(ValueError, match=r"0\.55 <= nu <= 4"):
         d.sample(np.full(10, 1.0), nu)
 
 
@@ -242,7 +242,7 @@ def test_invalid_nu_reported_in_message(d):
 
 def test_on_invalid_nu_warn_mode():
     lenient = CMP(seed=0, on_invalid_nu="warn")
-    with pytest.warns(RuntimeWarning, match=r"0\.5 <= nu <= 4"):
+    with pytest.warns(RuntimeWarning, match=r"0\.55 <= nu <= 4"):
         out = lenient.sample(np.full(10, 1.0), 0.3)
     assert out.shape == (10,)
 
@@ -262,8 +262,8 @@ def test_nu_range_none_disables_check():
 def test_custom_nu_range():
     wide = CMP(seed=0, nu_range=(0.1, 5.0))
     assert wide.sample(np.full(10, 1.0), 0.3).shape == (10,)
-    with pytest.raises(ValueError, match=r"0\.1 < nu < 5"):
-        wide.sample(np.full(10, 1.0), 0.1)
+    with pytest.raises(ValueError, match=r"0\.1 <= nu <= 5"):
+        wide.sample(np.full(10, 1.0), 0.09)
 
 
 def test_bad_policy_rejected():
@@ -272,9 +272,9 @@ def test_bad_policy_rejected():
 
 
 def test_validation_applies_to_pmf_and_rate(d):
-    with pytest.raises(ValueError, match=r"0\.55 < nu < 4"):
+    with pytest.raises(ValueError, match=r"0\.55 <= nu <= 4"):
         d.pmf([0, 1], 1.0, 0.3)
-    with pytest.raises(ValueError, match=r"0\.55 < nu < 4"):
+    with pytest.raises(ValueError, match=r"0\.55 <= nu <= 4"):
         d.rate(1.0, 4.01)
 
 
@@ -337,7 +337,7 @@ def test_log_norm_poisson_limit(d):
         assert d.log_norm(rate, 1.0, max_x=400) == pytest.approx(rate, rel=1e-12)
 
 
-@pytest.mark.parametrize("nu", [0.6, 0.8, 1.0, 1.5, 2.0, 3.0, 4.0])
+@pytest.mark.parametrize("nu", [0.6, 0.8, 1.0, 1.5, 2.0, 3.0, 3.9])
 def test_mean_recovered_within_5_percent_across_nu_range(nu):
     """The accuracy claim for nu_range, pinned so it cannot drift silently.
 
@@ -352,18 +352,18 @@ def test_mean_recovered_within_5_percent_across_nu_range(nu):
 
 
 def test_nu_lower_endpoint_is_the_documented_exception():
-    """nu = 0.5 is inside nu_range but is the one point exceeding 5%.
+    """nu = 0.55 is the excluded lower bound and is the one point exceeding 5%.
 
-    Documented as ~9%, confined to lam near the branch crossover. If this
+    Documented as ~5.2%, confined to lam near the branch crossover. If this
     tightens or worsens, the docs and README table need updating with it.
     """
     d = CMP(nu_range=None)
     lam = np.geomspace(1e-3, 1e3, 200)
     bias = np.array([
-        (np.arange(d.max_count(l) + 1) * d.pmf(np.arange(d.max_count(l) + 1), l, 0.5)).sum() / l - 1
+        (np.arange(d.max_count(l) + 1) * d.pmf(np.arange(d.max_count(l) + 1), l, 0.55)).sum() / l - 1
         for l in lam
     ])
-    assert 0.05 < np.abs(bias).max() < 0.10
+    assert 0.05 < np.abs(bias).max() < 0.06
     offending = lam[np.abs(bias) > 0.05]
     assert 0.5 < offending.min() and offending.max() < 1.5
 
@@ -380,7 +380,7 @@ def test_beyond_upper_bound_degrades_gradually_not_catastrophically():
 def test_max_count_is_wide_enough(d):
     """Truncation must leave a negligible tail across the valid nu range."""
     for lam in [1.0, 10.0, 50.0, 300.0]:
-        for nu in [0.5, 1.0, 2.0, 4.0]:
+        for nu in [0.6, 1.0, 2.0, 3.9]:
             max_x = d.max_count(lam)
             tail = d.pmf(np.arange(max_x - 4, max_x + 1), lam, nu).sum()
             assert tail < 1e-8, f"lam={lam} nu={nu} tail={tail}"
