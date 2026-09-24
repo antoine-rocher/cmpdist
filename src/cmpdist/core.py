@@ -42,17 +42,15 @@ class CMP:
         Width of the error-function ramp blending the small-mean and large-mean
         branches of the mean-to-rate mapping.
     nu_range : tuple of float or None
-        Closed range ``[lo, hi]`` over which the mean-to-rate mapping is
-        trusted; both endpoints are usable. ``None`` disables the check
-        entirely.
+        Open interval ``(lo, hi)`` over which the mean-to-rate mapping is
+        trusted. ``None`` disables the check entirely.
 
-        The default ``(0.5, 4.0)`` is where the mapping stays usable. Measured
-        worst-case error on the recovered mean, over lam in 1e-3 .. 1e3:
+        The default ``(0.55, 4.0)`` is the operating window that stays usable.
+        Measured worst-case error on the recovered mean, over lam in 1e-3 .. 1e3:
 
         ====================  ==================================
         nu                    worst |mean/lam - 1|
         ====================  ==================================
-        0.5                   9.1%   (only for 0.6 < lam < 1.0)
         0.55                  5.2%
         0.6 .. 4.0            <= 5%, and exact at nu = 1
         4.14                  5.0%, the true edge
@@ -61,14 +59,13 @@ class CMP:
 
         The error is confined to lam near the 0.8 branch crossover; away from
         ``0.6 < lam < 1.5`` the mapping is accurate even well outside this
-        range. nu = 0.5 is included because it is a common choice, but it is
-        the one point inside the range that exceeds 5% — see `rate`.
+        range. The lower edge is excluded because values at or below 0.55 can
+        drift badly enough to break the mapping near ``lam ≈ 1``.
     on_invalid_nu : {'raise', 'warn', 'ignore'}
         What to do with a ``nu`` outside ``nu_range``. Defaults to ``'raise'``:
-        below nu = 0.5 the mapping does not merely lose accuracy, it can return
-        NaN and yield all-zero counts, which is far worse to inherit silently
-        than an exception. Above the upper bound it degrades gradually rather
-        than failing, so ``'warn'`` is reasonable there.
+        below nu = 0.55 the mapping can lose accuracy badly and, for small enough
+        ``nu``, may return NaN and yield all-zero counts. Above the upper bound it
+        degrades gradually rather than failing, so ``'warn'`` is reasonable there.
 
     Examples
     --------
@@ -80,7 +77,7 @@ class CMP:
     array([3, 5, 4, ...])
     """
 
-    def __init__(self, seed=None, blend_width=0.2, nu_range=(0.5, 4.0),
+    def __init__(self, seed=None, blend_width=0.2, nu_range=(0.55, 4.0),
                  on_invalid_nu="raise"):
         if on_invalid_nu not in _NU_POLICIES:
             raise ValueError(
@@ -230,12 +227,12 @@ class CMP:
     def _validate_nu(self, arr):
         """Enforce ``nu_range`` according to :attr:`on_invalid_nu`.
 
-        The range is closed: ``lo <= nu <= hi``, both endpoints usable.
+        The range is open: ``lo < nu < hi``.
         """
         if self.nu_range is None or self.on_invalid_nu == "ignore" or arr.size == 0:
             return
         lo, hi = self.nu_range
-        bad = (arr < lo) | (arr > hi)
+        bad = (arr <= lo) | (arr >= hi)
         if not bad.any():
             return
 
@@ -244,7 +241,7 @@ class CMP:
         if offenders.size > 5:
             shown += f", ... ({offenders.size} distinct values)"
         message = (
-            f"nu must satisfy {lo} <= nu <= {hi}; got {shown}. Outside that range "
+            f"nu must satisfy {lo} < nu < {hi}; got {shown}. Outside that range "
             f"the mean-to-rate mapping is not valid and can return NaN, giving "
             f"meaningless counts. Pass on_invalid_nu='warn' or 'ignore' to "
             f"override, or widen nu_range."
